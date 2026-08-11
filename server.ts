@@ -77,19 +77,24 @@ const handleBase64Upload = async (coverImageUrl: string | undefined): Promise<st
 
 // 1. Authentication API
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    res.status(400).json({ error: 'Email and password are required.' });
-    return;
-  }
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      res.status(400).json({ error: 'Email and password are required.' });
+      return;
+    }
 
-  const user = await db.verifyUserLogin(email, password);
-  if (!user) {
-    res.status(401).json({ error: 'Invalid email or password.' });
-    return;
-  }
+    const user = await db.verifyUserLogin(email, password);
+    if (!user) {
+      res.status(401).json({ error: 'Invalid email or password.' });
+      return;
+    }
 
-  res.json({ user });
+    res.json({ user });
+  } catch (err: any) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Database connection failed. Please reload the page.' });
+  }
 });
 
 app.post('/api/auth/logout', (req, res) => {
@@ -98,88 +103,113 @@ app.post('/api/auth/logout', (req, res) => {
 
 // 2. Articles API
 app.get('/api/articles', async (req, res) => {
-  const { category, search, paywall, includeDrafts } = req.query;
-  const showDrafts = includeDrafts === 'true';
-  
-  const articles = await db.getAllArticles(
-    category as string,
-    search as string,
-    paywall as any,
-    showDrafts
-  );
-  res.json({ articles });
+  try {
+    const { category, search, paywall, includeDrafts } = req.query;
+    const showDrafts = includeDrafts === 'true';
+    
+    const articles = await db.getAllArticles(
+      category as string,
+      search as string,
+      paywall as any,
+      showDrafts
+    );
+    res.json({ articles });
+  } catch (err: any) {
+    console.error('Articles fetch error:', err);
+    res.status(500).json({ error: 'Database connection failed. Please reload the page.' });
+  }
 });
 
 app.get('/api/articles/:slug', async (req, res) => {
-  const article = await db.getArticleBySlug(req.params.slug);
-  if (!article) {
-    res.status(404).json({ error: 'Article not found' });
-    return;
+  try {
+    const article = await db.getArticleBySlug(req.params.slug);
+    if (!article) {
+      res.status(404).json({ error: 'Article not found' });
+      return;
+    }
+    res.json({ article });
+  } catch (err: any) {
+    console.error('Article fetch error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
   }
-  res.json({ article });
 });
 
 // CMS Route: Create Article (Admin or Journalist only)
 app.post('/api/articles', checkRole(['ADMIN', 'JOURNALIST']), async (req, res) => {
-  const { title, content, category, coverImageUrl, authorId, seoHeadlines, metaDescription, tags, status } = req.body;
-  
-  if (!title || !content) {
-    res.status(400).json({ error: 'Title and Content are required.' });
-    return;
+  try {
+    const { title, content, category, coverImageUrl, authorId, seoHeadlines, metaDescription, tags, status } = req.body;
+    
+    if (!title || !content) {
+      res.status(400).json({ error: 'Title and Content are required.' });
+      return;
+    }
+
+    const finalCoverImageUrl = await handleBase64Upload(coverImageUrl);
+
+    const currentUserId = authorId || (req.headers['x-user-id'] as string) || 'usr-journo-1';
+    let author = await db.getUserById(currentUserId);
+    if (!author) {
+      author = await db.getUserById('usr-journo-1');
+    }
+
+    if (!author) {
+      res.status(500).json({ error: 'Author not found.' });
+      return;
+    }
+
+    const newArticle = await db.createArticle(
+      {
+        title,
+        content,
+        category: category || 'City Hall',
+        paywallStatus: 'FREE', // Default paywallStatus to FREE as requested
+        coverImageUrl: finalCoverImageUrl,
+        seoHeadlines,
+        metaDescription,
+        tags,
+        status: status || 'DRAFT',
+      },
+      author
+    );
+
+    res.status(201).json({ article: newArticle });
+  } catch (err: any) {
+    console.error('Article create error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
   }
-
-  const finalCoverImageUrl = await handleBase64Upload(coverImageUrl);
-
-  const currentUserId = authorId || (req.headers['x-user-id'] as string) || 'usr-journo-1';
-  let author = await db.getUserById(currentUserId);
-  if (!author) {
-    author = await db.getUserById('usr-journo-1');
-  }
-
-  if (!author) {
-    res.status(500).json({ error: 'Author not found.' });
-    return;
-  }
-
-  const newArticle = await db.createArticle(
-    {
-      title,
-      content,
-      category: category || 'City Hall',
-      paywallStatus: 'FREE', // Default paywallStatus to FREE as requested
-      coverImageUrl: finalCoverImageUrl,
-      seoHeadlines,
-      metaDescription,
-      tags,
-      status: status || 'DRAFT',
-    },
-    author
-  );
-
-  res.status(201).json({ article: newArticle });
 });
 
 // CMS Route: Update Article (Admin or Journalist only)
 app.put('/api/articles/:id', checkRole(['ADMIN', 'JOURNALIST']), async (req, res) => {
-  if (req.body.coverImageUrl) {
-    req.body.coverImageUrl = await handleBase64Upload(req.body.coverImageUrl);
+  try {
+    if (req.body.coverImageUrl) {
+      req.body.coverImageUrl = await handleBase64Upload(req.body.coverImageUrl);
+    }
+    const updated = await db.updateArticle(req.params.id, req.body);
+    if (!updated) {
+      res.status(404).json({ error: 'Article not found' });
+      return;
+    }
+    res.json({ article: updated });
+  } catch (err: any) {
+    console.error('Article update error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
   }
-  const updated = await db.updateArticle(req.params.id, req.body);
-  if (!updated) {
-    res.status(404).json({ error: 'Article not found' });
-    return;
-  }
-  res.json({ article: updated });
 });
 
 // CMS Route: Delete Article (Admin or Journalist only)
 app.delete('/api/articles/:id', checkRole(['ADMIN', 'JOURNALIST']), async (req, res) => {
-  const success = await db.deleteArticle(req.params.id);
-  if (!success) {
-    res.status(404).json({ error: 'Article not found or already deleted' });
-    return;
+  try {
+    const success = await db.deleteArticle(req.params.id);
+    if (!success) {
+      res.status(404).json({ error: 'Article not found or already deleted' });
+      return;
+    }
+    res.json({ success: true, message: 'Article deleted successfully' });
+  } catch (err: any) {
+    console.error('Article delete error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
   }
-  res.json({ success: true, message: 'Article deleted successfully' });
 });
 
 // 3. Gemini AI Optimization Route
@@ -201,155 +231,217 @@ app.post('/api/ai/optimize', checkRole(['ADMIN', 'JOURNALIST']), async (req, res
 
 // 4. Threaded Comments API
 app.get('/api/comments/:articleId', async (req, res) => {
-  const comments = await db.getCommentsForArticle(req.params.articleId);
-  res.json({ comments });
+  try {
+    const comments = await db.getCommentsForArticle(req.params.articleId);
+    res.json({ comments });
+  } catch (err: any) {
+    console.error('Comments fetch error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
+  }
 });
 
 app.post('/api/comments', async (req, res) => {
-  const { articleId, content, parentId, userId } = req.body;
-  if (!articleId || !content) {
-    res.status(400).json({ error: 'Article ID and Content are required.' });
-    return;
-  }
+  try {
+    const { articleId, content, parentId, userId } = req.body;
+    if (!articleId || !content) {
+      res.status(400).json({ error: 'Article ID and Content are required.' });
+      return;
+    }
 
-  const currentUserId = userId || (req.headers['x-user-id'] as string) || 'usr-reader-1';
-  let user = await db.getUserById(currentUserId);
-  if (!user) {
-    user = await db.getUserById('usr-reader-1');
-  }
+    const currentUserId = userId || (req.headers['x-user-id'] as string) || 'usr-reader-1';
+    let user = await db.getUserById(currentUserId);
+    if (!user) {
+      user = await db.getUserById('usr-reader-1');
+    }
 
-  if (!user) {
-    res.status(500).json({ error: 'User not found.' });
-    return;
-  }
+    if (!user) {
+      res.status(500).json({ error: 'User not found.' });
+      return;
+    }
 
-  const newComment = await db.addComment(articleId, content, user, parentId);
-  res.status(201).json({ comment: newComment });
+    const newComment = await db.addComment(articleId, content, user, parentId);
+    res.status(201).json({ comment: newComment });
+  } catch (err: any) {
+    console.error('Comment create error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
+  }
 });
 
 // 5. Sponsorships & Ad Placements API
 app.get('/api/ads', async (req, res) => {
-  const { location } = req.query;
-  if (location) {
-    res.json({ ads: await db.getAds(location as any) });
-  } else {
-    res.json({ ads: await db.getAllAds() });
+  try {
+    const { location } = req.query;
+    if (location) {
+      res.json({ ads: await db.getAds(location as any) });
+    } else {
+      res.json({ ads: await db.getAllAds() });
+    }
+  } catch (err: any) {
+    console.error('Ads fetch error:', err);
+    res.status(500).json({ error: 'Database connection failed. Please reload the page.' });
   }
 });
 
 app.post('/api/ads/track', async (req, res) => {
-  const { id, type } = req.body;
-  if (!id || !type || !['impression', 'click'].includes(type)) {
-    res.status(400).json({ error: 'Valid Ad ID and type ("impression" | "click") are required.' });
-    return;
+  try {
+    const { id, type } = req.body;
+    if (!id || !type || !['impression', 'click'].includes(type)) {
+      res.status(400).json({ error: 'Valid Ad ID and type ("impression" | "click") are required.' });
+      return;
+    }
+    const updatedAd = await db.trackAdEvent(id, type);
+    res.json({ ad: updatedAd });
+  } catch (err: any) {
+    console.error('Ad tracking error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
   }
-  const updatedAd = await db.trackAdEvent(id, type);
-  res.json({ ad: updatedAd });
 });
 
 app.post('/api/ads', checkRole(['ADMIN', 'JOURNALIST']), async (req, res) => {
-  const { advertiserName, title, bannerUrl, targetUrl, location, maxImpressions } = req.body;
-  if (!advertiserName || !title || !targetUrl) {
-    res.status(400).json({ error: 'Advertiser name, title, and target URL are required.' });
-    return;
+  try {
+    const { advertiserName, title, bannerUrl, targetUrl, location, maxImpressions } = req.body;
+    if (!advertiserName || !title || !targetUrl) {
+      res.status(400).json({ error: 'Advertiser name, title, and target URL are required.' });
+      return;
+    }
+    const newAd = await db.createAd({
+      advertiserName,
+      title,
+      bannerUrl,
+      targetUrl,
+      location: location || 'SIDEBAR',
+      maxImpressions: maxImpressions ? Number(maxImpressions) : undefined,
+    });
+    res.status(201).json({ ad: newAd });
+  } catch (err: any) {
+    console.error('Ad create error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
   }
-  const newAd = await db.createAd({
-    advertiserName,
-    title,
-    bannerUrl,
-    targetUrl,
-    location: location || 'SIDEBAR',
-    maxImpressions: maxImpressions ? Number(maxImpressions) : undefined,
-  });
-  res.status(201).json({ ad: newAd });
 });
 
 // 6. User Management API (Admin only for full CRUD)
 app.get('/api/users', checkRole(['ADMIN']), async (req, res) => {
-  const users = await db.getAllUsers();
-  res.json({ users });
+  try {
+    const users = await db.getAllUsers();
+    res.json({ users });
+  } catch (err: any) {
+    console.error('Users fetch error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
+  }
 });
 
 app.post('/api/users', checkRole(['ADMIN']), async (req, res) => {
-  const { email, name, password, role, avatarUrl, bio } = req.body;
-  if (!email || !name || !role) {
-    res.status(400).json({ error: 'Email, Name, and Role are required.' });
-    return;
-  }
-
   try {
+    const { email, name, password, role, avatarUrl, bio } = req.body;
+    if (!email || !name || !role) {
+      res.status(400).json({ error: 'Email, Name, and Role are required.' });
+      return;
+    }
+
     const newUser = await db.createUser({ email, name, password, role, avatarUrl, bio });
     res.status(201).json({ user: newUser });
   } catch (err: any) {
-    res.status(400).json({ error: 'Failed to create user. Email may already exist.' });
+    console.error('User create error:', err);
+    res.status(400).json({ error: 'Failed to create user. Email may already exist or DB is connection timed out.' });
   }
 });
 
 app.delete('/api/users/:id', checkRole(['ADMIN']), async (req, res) => {
-  const success = await db.deleteUser(req.params.id);
-  if (!success) {
-    res.status(404).json({ error: 'User not found or failed to delete.' });
-    return;
+  try {
+    const success = await db.deleteUser(req.params.id);
+    if (!success) {
+      res.status(404).json({ error: 'User not found or failed to delete.' });
+      return;
+    }
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (err: any) {
+    console.error('User delete error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
   }
-  res.json({ success: true, message: 'User deleted successfully' });
 });
 
 app.put('/api/users/role', async (req, res) => {
-  const { userId, role } = req.body;
-  if (!userId || !role) {
-    res.status(400).json({ error: 'User ID and Role are required.' });
-    return;
+  try {
+    const { userId, role } = req.body;
+    if (!userId || !role) {
+      res.status(400).json({ error: 'User ID and Role are required.' });
+      return;
+    }
+    const user = await db.updateUserRole(userId, role);
+    res.json({ user });
+  } catch (err: any) {
+    console.error('User role update error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
   }
-  const user = await db.updateUserRole(userId, role);
-  res.json({ user });
 });
 
 app.put('/api/users/:id/role', checkRole(['ADMIN']), async (req, res) => {
-  const { role } = req.body;
-  if (!role) {
-    res.status(400).json({ error: 'Role is required.' });
-    return;
+  try {
+    const { role } = req.body;
+    if (!role) {
+      res.status(400).json({ error: 'Role is required.' });
+      return;
+    }
+    const user = await db.updateUserRole(req.params.id, role);
+    res.json({ user });
+  } catch (err: any) {
+    console.error('User role update error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
   }
-  const user = await db.updateUserRole(req.params.id, role);
-  res.json({ user });
 });
 
 app.get('/api/users/:id', async (req, res) => {
-  const user = await db.getUserById(req.params.id);
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    return;
+  try {
+    const user = await db.getUserById(req.params.id);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+    res.json({ user });
+  } catch (err: any) {
+    console.error('User fetch error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
   }
-  res.json({ user });
 });
 
 // 7. Dynamic Category API
 app.get('/api/categories', async (req, res) => {
-  const categories = await db.getAllCategories();
-  res.json({ categories });
+  try {
+    const categories = await db.getAllCategories();
+    res.json({ categories });
+  } catch (err: any) {
+    console.error('Categories fetch error:', err);
+    res.status(500).json({ error: 'Database connection failed. Please reload the page.' });
+  }
 });
 
 app.post('/api/categories', checkRole(['ADMIN', 'JOURNALIST']), async (req, res) => {
-  const { name } = req.body;
-  if (!name || !name.trim()) {
-    res.status(400).json({ error: 'Category name is required.' });
-    return;
-  }
   try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      res.status(400).json({ error: 'Category name is required.' });
+      return;
+    }
     const category = await db.createCategory(name.trim());
     res.status(201).json({ category });
   } catch (err: any) {
-    res.status(400).json({ error: 'Category already exists or invalid.' });
+    console.error('Category create error:', err);
+    res.status(400).json({ error: 'Category already exists or database is unreachable.' });
   }
 });
 
 app.delete('/api/categories/:id', checkRole(['ADMIN']), async (req, res) => {
-  const success = await db.deleteCategory(req.params.id);
-  if (!success) {
-    res.status(404).json({ error: 'Category not found' });
-    return;
+  try {
+    const success = await db.deleteCategory(req.params.id);
+    if (!success) {
+      res.status(404).json({ error: 'Category not found' });
+      return;
+    }
+    res.json({ success: true, message: 'Category deleted successfully' });
+  } catch (err: any) {
+    console.error('Category delete error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
   }
-  res.json({ success: true, message: 'Category deleted successfully' });
 });
 
 // 8. Analytics Overview API
