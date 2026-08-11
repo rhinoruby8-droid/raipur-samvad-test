@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { AiOptimizeResult } from '../src/types';
+import { AiOptimizeResult } from '../src/types.js';
 
 let aiClient: GoogleGenAI | null = null;
 

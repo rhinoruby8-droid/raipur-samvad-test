@@ -2,9 +2,9 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
-import { db } from './server/db';
-import { optimizeArticleWithGemini } from './server/gemini';
-import { Role } from './src/types';
+import { db } from './server/db.js';
+import { optimizeArticleWithGemini } from './server/gemini.js';
+import { Role } from './src/types.js';
 import { put } from '@vercel/blob';
 
 const app = express();

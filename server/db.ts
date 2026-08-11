@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { Article, User, Comment, AdPlacement, CmsArticleInput, Role, PaywallStatus, AdLocation } from '../src/types';
+import { Article, User, Comment, AdPlacement, CmsArticleInput, Role, PaywallStatus, AdLocation } from '../src/types.js';
 
 const prisma = new PrismaClient();
 
