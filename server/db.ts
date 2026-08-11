@@ -477,6 +477,101 @@ class DatabaseStore {
       return false;
     }
   }
+
+  // --- Comment Management Methods ---
+  async getAllComments(): Promise<(Comment & { articleTitle: string })[]> {
+    const list = await prisma.comment.findMany({
+      include: {
+        author: true,
+        article: { select: { title: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    return list.map(c => ({
+      id: c.id,
+      content: c.content,
+      articleId: c.articleId,
+      authorId: c.authorId,
+      authorName: c.author.name,
+      authorRole: c.author.role as any,
+      authorAvatar: c.author.avatarUrl || undefined,
+      parentId: c.parentId,
+      createdAt: c.createdAt.toISOString(),
+      articleTitle: c.article.title
+    }));
+  }
+
+  async deleteComment(id: string): Promise<boolean> {
+    try {
+      await prisma.comment.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // --- Ad Management Methods ---
+  async updateAd(id: string, data: Partial<AdPlacement>): Promise<AdPlacement | undefined> {
+    try {
+      const updated = await prisma.adPlacement.update({
+        where: { id },
+        data: {
+          advertiserName: data.advertiserName,
+          title: data.title,
+          bannerUrl: data.bannerUrl,
+          targetUrl: data.targetUrl,
+          location: data.location,
+          maxImpressions: data.maxImpressions,
+          active: data.active,
+          startDate: data.startDate ? new Date(data.startDate) : undefined,
+          endDate: data.endDate ? new Date(data.endDate) : undefined,
+        }
+      });
+      return {
+        ...updated,
+        location: updated.location as any,
+        bannerUrl: updated.bannerUrl || undefined,
+        maxImpressions: updated.maxImpressions || undefined,
+        startDate: updated.startDate.toISOString(),
+        endDate: updated.endDate?.toISOString() || undefined
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  async deleteAd(id: string): Promise<boolean> {
+    try {
+      await prisma.adPlacement.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async toggleAdActive(id: string): Promise<AdPlacement | undefined> {
+    try {
+      const current = await prisma.adPlacement.findUnique({ where: { id } });
+      if (!current) return undefined;
+      
+      const updated = await prisma.adPlacement.update({
+        where: { id },
+        data: { active: !current.active }
+      });
+      
+      return {
+        ...updated,
+        location: updated.location as any,
+        bannerUrl: updated.bannerUrl || undefined,
+        maxImpressions: updated.maxImpressions || undefined,
+        startDate: updated.startDate.toISOString(),
+        endDate: updated.endDate?.toISOString() || undefined
+      };
+    } catch {
+      return undefined;
+    }
+  }
 }
 
 export const db = new DatabaseStore();

@@ -35,6 +35,7 @@ export default function App() {
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [ads, setAds] = useState<AdPlacement[]>([]);
+  const [allComments, setAllComments] = useState<any[]>([]);
   const [isCmsOpen, setIsCmsOpen] = useState<boolean>(false);
   const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
@@ -130,12 +131,26 @@ export default function App() {
     }
   };
 
+  const fetchAllComments = async () => {
+    if (currentUser.role !== 'ADMIN') return;
+    try {
+      const res = await fetch('/api/comments', {
+        headers: { 'x-user-role': currentUser.role }
+      });
+      const data = await res.json();
+      if (data.comments) setAllComments(data.comments);
+    } catch (err) {
+      console.error('Failed to fetch all comments:', err);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       setLoading(true);
       await Promise.all([fetchArticles(), fetchAds(), fetchCategories()]);
       if (currentUser.role === 'ADMIN') {
         await fetchUsers();
+        await fetchAllComments();
       }
       setLoading(false);
     };
@@ -349,6 +364,42 @@ export default function App() {
     }
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    const res = await fetch(`/api/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: { 'x-user-role': currentUser.role }
+    });
+    if (res.ok) await fetchAllComments();
+  };
+
+  const handleUpdateAd = async (id: string, adData: any) => {
+    const res = await fetch(`/api/ads/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-role': currentUser.role,
+      },
+      body: JSON.stringify(adData),
+    });
+    if (res.ok) await fetchAds();
+  };
+
+  const handleDeleteAd = async (id: string) => {
+    const res = await fetch(`/api/ads/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-user-role': currentUser.role }
+    });
+    if (res.ok) await fetchAds();
+  };
+
+  const handleToggleAd = async (id: string) => {
+    const res = await fetch(`/api/ads/${id}/toggle`, {
+      method: 'PUT',
+      headers: { 'x-user-role': currentUser.role }
+    });
+    if (res.ok) await fetchAds();
+  };
+
   // Track Ad Impressions/Clicks
   const handleTrackAd = async (id: string, type: 'impression' | 'click') => {
     try {
@@ -418,6 +469,11 @@ export default function App() {
             onDeleteUser={handleDeleteUser}
             onUpdateUserRole={handleUpdateUserRole}
             onClose={() => setIsCmsOpen(false)}
+            allComments={allComments}
+            onDeleteComment={handleDeleteComment}
+            onUpdateAd={handleUpdateAd}
+            onDeleteAd={handleDeleteAd}
+            onToggleAd={handleToggleAd}
           />
         ) : selectedArticle ? (
           /* VIEW 2: SINGLE ARTICLE READER */

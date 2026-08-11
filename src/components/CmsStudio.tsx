@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PenTool, Sparkles, Plus, Trash2, Edit3, CheckCircle, BarChart3, Megaphone, Check, AlertCircle, RefreshCw, Layers, Users, TrendingUp } from 'lucide-react';
+import { PenTool, Sparkles, Plus, Trash2, Edit3, CheckCircle, BarChart3, Megaphone, Check, AlertCircle, RefreshCw, Layers, Users, TrendingUp, MessageSquare } from 'lucide-react';
 import { Article, User, CmsArticleInput, AdPlacement, AiOptimizeResult, Category } from '../types';
 
 interface CmsStudioProps {
@@ -11,6 +11,9 @@ interface CmsStudioProps {
   onOptimizeWithAi: (content: string, title?: string) => Promise<AiOptimizeResult>;
   ads: AdPlacement[];
   onCreateAd: (ad: any) => Promise<void>;
+  onUpdateAd: (id: string, ad: any) => Promise<void>;
+  onDeleteAd: (id: string) => Promise<void>;
+  onToggleAd: (id: string) => Promise<void>;
   categories: Category[];
   onCreateCategory: (name: string) => Promise<void>;
   onDeleteCategory: (id: string) => Promise<void>;
@@ -19,7 +22,10 @@ interface CmsStudioProps {
   onDeleteUser: (userId: string) => Promise<void>;
   onUpdateUserRole: (userId: string, role: string) => Promise<void>;
   onClose: () => void;
+  allComments: any[];
+  onDeleteComment: (commentId: string) => Promise<void>;
 }
+
 
 export const CmsStudio: React.FC<CmsStudioProps> = ({
   currentUser,
@@ -30,6 +36,9 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
   onOptimizeWithAi,
   ads,
   onCreateAd,
+  onUpdateAd,
+  onDeleteAd,
+  onToggleAd,
   categories,
   onCreateCategory,
   onDeleteCategory,
@@ -38,8 +47,10 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
   onDeleteUser,
   onUpdateUserRole,
   onClose,
+  allComments,
+  onDeleteComment,
 }) => {
-  const [activeTab, setActiveTab] = useState<'ARTICLES' | 'NEW_ARTICLE' | 'SPONSORSHIPS' | 'CATEGORIES' | 'USERS' | 'ANALYTICS'>('ARTICLES');
+  const [activeTab, setActiveTab] = useState<'ARTICLES' | 'NEW_ARTICLE' | 'COMMENTS' | 'SPONSORSHIPS' | 'CATEGORIES' | 'USERS' | 'ANALYTICS'>('ARTICLES');
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
 
   // Form State
@@ -338,6 +349,20 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
           <Layers className="w-4 h-4" />
           <span>Category Manager</span>
         </button>
+
+        {currentUser.role === 'ADMIN' && (
+          <button
+            onClick={() => setActiveTab('COMMENTS')}
+            className={`px-4 py-3 text-xs font-bold font-sans flex items-center space-x-2 border-b-2 cursor-pointer transition-all ${
+              activeTab === 'COMMENTS'
+                ? 'border-[#dc2626] text-[#dc2626] bg-white font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>Comments</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('SPONSORSHIPS')}
@@ -769,7 +794,60 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
           </div>
         )}
 
-        {/* TAB 4: SPONSORSHIPS & ADS */}
+        {/* TAB 4: COMMENTS MODERATION (ADMIN ONLY) */}
+        {activeTab === 'COMMENTS' && currentUser.role === 'ADMIN' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-bold font-playfair text-slate-900">Comment Moderation Dashboard</h3>
+              <p className="text-xs text-slate-500">Review, approve, or remove reader comments across all articles.</p>
+            </div>
+            <div className="overflow-x-auto border border-slate-200 rounded-lg">
+              <table className="w-full text-left text-xs font-sans">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                  <tr>
+                    <th className="p-3.5">Comment</th>
+                    <th className="p-3.5">Author</th>
+                    <th className="p-3.5">Article</th>
+                    <th className="p-3.5">Date</th>
+                    <th className="p-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {allComments.length === 0 ? (
+                    <tr><td colSpan={5} className="p-8 text-center text-slate-400">No comments found.</td></tr>
+                  ) : allComments.map((c: any) => (
+                    <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="p-3.5 max-w-xs">
+                        <p className="text-slate-800 line-clamp-2">{c.content}</p>
+                      </td>
+                      <td className="p-3.5">
+                        <div className="font-bold text-slate-900">{c.authorName}</div>
+                        <span className="text-[10px] text-slate-400">{c.authorRole}</span>
+                      </td>
+                      <td className="p-3.5">
+                        <span className="text-[#dc2626] font-bold line-clamp-1">{c.articleTitle || 'Unknown'}</span>
+                      </td>
+                      <td className="p-3.5 text-slate-500">
+                        {new Date(c.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="p-3.5 text-right">
+                        <button
+                          onClick={() => onDeleteComment(c.id)}
+                          className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 border border-rose-150 transition-all cursor-pointer"
+                          title="Delete Comment"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: SPONSORSHIPS & ADS */}
         {activeTab === 'SPONSORSHIPS' && (
           <div className="space-y-6">
             <div>
@@ -786,7 +864,8 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
                     <th className="p-3.5">Impressions</th>
                     <th className="p-3.5">Clicks</th>
                     <th className="p-3.5">CTR Rate</th>
-                    <th className="p-3.5 font-right">Status</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -807,9 +886,25 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
                         <td className="p-3.5 font-mono text-rose-600 font-bold">{ad.clicks.toLocaleString()}</td>
                         <td className="p-3.5 font-mono font-bold text-emerald-600">{ctr}%</td>
                         <td className="p-3.5">
-                          <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-100 text-emerald-800 text-[10px] font-bold">
-                            ACTIVE
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${ad.active ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
+                            {ad.active ? 'ACTIVE' : 'PAUSED'}
                           </span>
+                        </td>
+                        <td className="p-3.5 text-right space-x-2">
+                          <button
+                            onClick={() => onToggleAd(ad.id)}
+                            className={`p-1.5 rounded-lg border transition-all cursor-pointer ${ad.active ? 'bg-amber-50 text-amber-600 border-amber-150 hover:bg-amber-600 hover:text-white' : 'bg-emerald-50 text-emerald-600 border-emerald-150 hover:bg-emerald-600 hover:text-white'}`}
+                            title={ad.active ? 'Pause Ad' : 'Activate Ad'}
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => onDeleteAd(ad.id)}
+                            className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 border border-rose-150 transition-all cursor-pointer"
+                            title="Delete Ad"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                     );

@@ -419,6 +419,93 @@ var DatabaseStore = class {
       return false;
     }
   }
+  // --- Comment Management Methods ---
+  async getAllComments() {
+    const list = await prisma.comment.findMany({
+      include: {
+        author: true,
+        article: { select: { title: true } }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+    return list.map((c) => ({
+      id: c.id,
+      content: c.content,
+      articleId: c.articleId,
+      authorId: c.authorId,
+      authorName: c.author.name,
+      authorRole: c.author.role,
+      authorAvatar: c.author.avatarUrl || void 0,
+      parentId: c.parentId,
+      createdAt: c.createdAt.toISOString(),
+      articleTitle: c.article.title
+    }));
+  }
+  async deleteComment(id) {
+    try {
+      await prisma.comment.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  // --- Ad Management Methods ---
+  async updateAd(id, data) {
+    try {
+      const updated = await prisma.adPlacement.update({
+        where: { id },
+        data: {
+          advertiserName: data.advertiserName,
+          title: data.title,
+          bannerUrl: data.bannerUrl,
+          targetUrl: data.targetUrl,
+          location: data.location,
+          maxImpressions: data.maxImpressions,
+          active: data.active,
+          startDate: data.startDate ? new Date(data.startDate) : void 0,
+          endDate: data.endDate ? new Date(data.endDate) : void 0
+        }
+      });
+      return {
+        ...updated,
+        location: updated.location,
+        bannerUrl: updated.bannerUrl || void 0,
+        maxImpressions: updated.maxImpressions || void 0,
+        startDate: updated.startDate.toISOString(),
+        endDate: updated.endDate?.toISOString() || void 0
+      };
+    } catch {
+      return void 0;
+    }
+  }
+  async deleteAd(id) {
+    try {
+      await prisma.adPlacement.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async toggleAdActive(id) {
+    try {
+      const current = await prisma.adPlacement.findUnique({ where: { id } });
+      if (!current) return void 0;
+      const updated = await prisma.adPlacement.update({
+        where: { id },
+        data: { active: !current.active }
+      });
+      return {
+        ...updated,
+        location: updated.location,
+        bannerUrl: updated.bannerUrl || void 0,
+        maxImpressions: updated.maxImpressions || void 0,
+        startDate: updated.startDate.toISOString(),
+        endDate: updated.endDate?.toISOString() || void 0
+      };
+    } catch {
+      return void 0;
+    }
+  }
 };
 var db = new DatabaseStore();
 
@@ -726,6 +813,28 @@ app.post("/api/comments", async (req, res) => {
     res.status(500).json({ error: "Database connection failed." });
   }
 });
+app.get("/api/comments", checkRole(["ADMIN"]), async (req, res) => {
+  try {
+    const comments = await db.getAllComments();
+    res.json({ comments });
+  } catch (err) {
+    console.error("Comments fetch error:", err);
+    res.status(500).json({ error: "Database connection failed." });
+  }
+});
+app.delete("/api/comments/:id", checkRole(["ADMIN"]), async (req, res) => {
+  try {
+    const success = await db.deleteComment(req.params.id);
+    if (!success) {
+      res.status(404).json({ error: "Comment not found." });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Comment delete error:", err);
+    res.status(500).json({ error: "Database connection failed." });
+  }
+});
 app.get("/api/ads", async (req, res) => {
   try {
     const { location } = req.query;
@@ -771,6 +880,45 @@ app.post("/api/ads", checkRole(["ADMIN", "JOURNALIST"]), async (req, res) => {
     res.status(201).json({ ad: newAd });
   } catch (err) {
     console.error("Ad create error:", err);
+    res.status(500).json({ error: "Database connection failed." });
+  }
+});
+app.put("/api/ads/:id", checkRole(["ADMIN"]), async (req, res) => {
+  try {
+    const updated = await db.updateAd(req.params.id, req.body);
+    if (!updated) {
+      res.status(404).json({ error: "Ad not found." });
+      return;
+    }
+    res.json({ ad: updated });
+  } catch (err) {
+    console.error("Ad update error:", err);
+    res.status(500).json({ error: "Database connection failed." });
+  }
+});
+app.delete("/api/ads/:id", checkRole(["ADMIN"]), async (req, res) => {
+  try {
+    const success = await db.deleteAd(req.params.id);
+    if (!success) {
+      res.status(404).json({ error: "Ad not found." });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Ad delete error:", err);
+    res.status(500).json({ error: "Database connection failed." });
+  }
+});
+app.put("/api/ads/:id/toggle", checkRole(["ADMIN"]), async (req, res) => {
+  try {
+    const updated = await db.toggleAdActive(req.params.id);
+    if (!updated) {
+      res.status(404).json({ error: "Ad not found." });
+      return;
+    }
+    res.json({ ad: updated });
+  } catch (err) {
+    console.error("Ad toggle error:", err);
     res.status(500).json({ error: "Database connection failed." });
   }
 });

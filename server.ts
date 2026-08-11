@@ -266,6 +266,30 @@ app.post('/api/comments', async (req, res) => {
   }
 });
 
+app.get('/api/comments', checkRole(['ADMIN']), async (req, res) => {
+  try {
+    const comments = await db.getAllComments();
+    res.json({ comments });
+  } catch (err: any) {
+    console.error('Comments fetch error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
+  }
+});
+
+app.delete('/api/comments/:id', checkRole(['ADMIN']), async (req, res) => {
+  try {
+    const success = await db.deleteComment(req.params.id);
+    if (!success) {
+      res.status(404).json({ error: 'Comment not found.' });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Comment delete error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
+  }
+});
+
 // 5. Sponsorships & Ad Placements API
 app.get('/api/ads', async (req, res) => {
   try {
@@ -314,6 +338,48 @@ app.post('/api/ads', checkRole(['ADMIN', 'JOURNALIST']), async (req, res) => {
     res.status(201).json({ ad: newAd });
   } catch (err: any) {
     console.error('Ad create error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
+  }
+});
+
+app.put('/api/ads/:id', checkRole(['ADMIN']), async (req, res) => {
+  try {
+    const updated = await db.updateAd(req.params.id, req.body);
+    if (!updated) {
+      res.status(404).json({ error: 'Ad not found.' });
+      return;
+    }
+    res.json({ ad: updated });
+  } catch (err: any) {
+    console.error('Ad update error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
+  }
+});
+
+app.delete('/api/ads/:id', checkRole(['ADMIN']), async (req, res) => {
+  try {
+    const success = await db.deleteAd(req.params.id);
+    if (!success) {
+      res.status(404).json({ error: 'Ad not found.' });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Ad delete error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
+  }
+});
+
+app.put('/api/ads/:id/toggle', checkRole(['ADMIN']), async (req, res) => {
+  try {
+    const updated = await db.toggleAdActive(req.params.id);
+    if (!updated) {
+      res.status(404).json({ error: 'Ad not found.' });
+      return;
+    }
+    res.json({ ad: updated });
+  } catch (err: any) {
+    console.error('Ad toggle error:', err);
     res.status(500).json({ error: 'Database connection failed.' });
   }
 });
