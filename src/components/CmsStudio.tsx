@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { PenTool, Sparkles, Plus, Trash2, Edit3, CheckCircle, BarChart3, Megaphone, Check, AlertCircle, RefreshCw, Layers, Users, TrendingUp, MessageSquare } from 'lucide-react';
-import { Article, User, CmsArticleInput, AdPlacement, AiOptimizeResult, Category } from '../types';
+import { PenTool, Sparkles, Plus, Trash2, Edit3, CheckCircle, BarChart3, Megaphone, Check, AlertCircle, RefreshCw, Layers, Users, TrendingUp, MessageSquare, Calendar } from 'lucide-react';
+import { Article, User, CmsArticleInput, AdPlacement, AiOptimizeResult, Category, EventCalendarItem } from '../types';
 
 interface CmsStudioProps {
   currentUser: User;
@@ -24,6 +24,9 @@ interface CmsStudioProps {
   onClose: () => void;
   allComments: any[];
   onDeleteComment: (commentId: string) => Promise<void>;
+  events: EventCalendarItem[];
+  onCreateEvent: (eventData: any) => Promise<void>;
+  onDeleteEvent: (id: string) => Promise<void>;
 }
 
 
@@ -49,8 +52,11 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
   onClose,
   allComments,
   onDeleteComment,
+  events,
+  onCreateEvent,
+  onDeleteEvent,
 }) => {
-  const [activeTab, setActiveTab] = useState<'ARTICLES' | 'NEW_ARTICLE' | 'COMMENTS' | 'SPONSORSHIPS' | 'CATEGORIES' | 'USERS' | 'ANALYTICS'>('ARTICLES');
+  const [activeTab, setActiveTab] = useState<'ARTICLES' | 'NEW_ARTICLE' | 'COMMENTS' | 'CALENDAR' | 'SPONSORSHIPS' | 'CATEGORIES' | 'USERS' | 'ANALYTICS'>('ARTICLES');
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
 
   // Form State
@@ -64,6 +70,12 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [status, setStatus] = useState<'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED'>('PUBLISHED');
+
+  // Event Calendar Form State
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventLocation, setEventLocation] = useState('');
+  const [eventType, setEventType] = useState<'PUBLIC_HOLIDAY' | 'STATE_FESTIVAL' | 'CIVIC_HEARING'>('PUBLIC_HOLIDAY');
 
   // Dynamic Category Form State
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -256,6 +268,21 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
     setTags(tags.filter(item => item !== t));
   };
 
+  const handleCreateEventSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventTitle || !eventDate || !eventLocation) return;
+    await onCreateEvent({
+      title: eventTitle,
+      date: eventDate,
+      timeLocation: eventLocation,
+      type: eventType,
+    });
+    setEventTitle('');
+    setEventDate('');
+    setEventLocation('');
+    setEventType('PUBLIC_HOLIDAY');
+  };
+
   const handleCreateAdSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adName || !adTitle || !adTargetUrl) return;
@@ -340,7 +367,7 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
 
         <button
           onClick={() => setActiveTab('CATEGORIES')}
-          className={`px-4 py-3 text-xs font-bold font-sans flex items-center space-x-2 border-b-2 cursor-pointer transition-all ${
+          className={`px-4 py-3 text-xs font-bold shrink-0 flex items-center space-x-2 border-b-2 cursor-pointer transition-all ${
             activeTab === 'CATEGORIES'
               ? 'border-[#dc2626] text-[#dc2626] bg-white font-extrabold'
               : 'border-transparent text-slate-500 hover:text-slate-900'
@@ -348,6 +375,18 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
         >
           <Layers className="w-4 h-4" />
           <span>Category Manager</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('CALENDAR')}
+          className={`px-4 py-3 text-xs font-bold shrink-0 flex items-center space-x-2 border-b-2 cursor-pointer transition-all ${
+            activeTab === 'CALENDAR'
+              ? 'border-[#dc2626] text-[#dc2626] bg-white font-extrabold'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          <span>Holidays & Events</span>
         </button>
 
         {currentUser.role === 'ADMIN' && (
@@ -787,6 +826,122 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
                     className="w-full py-2 px-4 bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold rounded-lg cursor-pointer transition-colors shadow-xs"
                   >
                     Register Category
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3b: EVENT & PUBLIC HOLIDAY CALENDAR MANAGER */}
+        {activeTab === 'CALENDAR' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-bold font-playfair text-slate-900">Local Public Calendar & Holidays Manager</h3>
+              <p className="text-xs text-slate-500">Manage public holidays, state festivals, and civic events shown in the live reader sidebar calendar.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 font-sans">
+              {/* Event List Table */}
+              <div className="md:col-span-8">
+                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                  <table className="w-full text-left text-xs min-w-[600px]">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                      <tr>
+                        <th className="p-3.5">Event / Holiday Name</th>
+                        <th className="p-3.5">Date</th>
+                        <th className="p-3.5">Type</th>
+                        <th className="p-3.5">Location / Notes</th>
+                        <th className="p-3.5 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {events.length === 0 ? (
+                        <tr><td colSpan={5} className="p-8 text-center text-slate-400">No events found.</td></tr>
+                      ) : events.map((ev) => (
+                        <tr key={ev.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-3.5 font-bold text-slate-900">{ev.title}</td>
+                          <td className="p-3.5 font-mono text-[#dc2626] font-bold">{ev.date}</td>
+                          <td className="p-3.5">
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
+                              ev.type === 'PUBLIC_HOLIDAY' ? 'bg-rose-50 border-rose-200 text-[#dc2626]' :
+                              ev.type === 'STATE_FESTIVAL' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                              'bg-slate-100 border-slate-200 text-slate-700'
+                            }`}>
+                              {ev.type?.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-slate-500 max-w-xs truncate">{ev.timeLocation}</td>
+                          <td className="p-3.5 text-right">
+                            <button
+                              onClick={() => onDeleteEvent(ev.id)}
+                              className="p-1.5 rounded bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-150 transition-colors cursor-pointer"
+                              title="Delete Event"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Add Event Form */}
+              <div className="md:col-span-4">
+                <form onSubmit={handleCreateEventSubmit} className="bg-slate-50 border border-slate-200 p-5 rounded-lg space-y-4 text-xs font-sans">
+                  <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wide">Add Holiday / Civic Event</h4>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Event Title *</label>
+                    <input
+                      type="text"
+                      value={eventTitle}
+                      onChange={(e) => setEventTitle(e.target.value)}
+                      placeholder="e.g. स्वतंत्रता दिवस (Independence Day)"
+                      className="w-full p-2.5 rounded border border-slate-300 bg-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Date *</label>
+                    <input
+                      type="text"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      placeholder="e.g. Aug 15, 2026 or Nov 01, 2026"
+                      className="w-full p-2.5 rounded border border-slate-300 bg-white font-mono"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Time & Location / Description *</label>
+                    <input
+                      type="text"
+                      value={eventLocation}
+                      onChange={(e) => setEventLocation(e.target.value)}
+                      placeholder="e.g. National Public Holiday • All India"
+                      className="w-full p-2.5 rounded border border-slate-300 bg-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Event Category Type</label>
+                    <select
+                      value={eventType}
+                      onChange={(e) => setEventType(e.target.value as any)}
+                      className="w-full p-2.5 rounded border border-slate-300 bg-white font-bold"
+                    >
+                      <option value="PUBLIC_HOLIDAY">PUBLIC HOLIDAY (National / Gazetted)</option>
+                      <option value="STATE_FESTIVAL">STATE FESTIVAL (Chhattisgarh)</option>
+                      <option value="CIVIC_HEARING">CIVIC HEARING (RMC / Municipal)</option>
+                    </select>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 px-4 bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold rounded-lg cursor-pointer transition-colors shadow-xs"
+                  >
+                    Register Holiday Event
                   </button>
                 </form>
               </div>

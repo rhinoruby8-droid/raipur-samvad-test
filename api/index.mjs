@@ -510,6 +510,79 @@ var DatabaseStore = class {
       return void 0;
     }
   }
+  // --- Event Calendar & Public Holiday Methods ---
+  async getAllEvents() {
+    let list = await prisma.eventCalendar.findMany({
+      orderBy: { createdAt: "asc" }
+    });
+    if (list.length === 0) {
+      const defaultEvents = [
+        { title: "\u0938\u094D\u0935\u0924\u0902\u0924\u094D\u0930\u0924\u093E \u0926\u093F\u0935\u0938 (Independence Day)", date: "Aug 15, 2026", timeLocation: "National Public Holiday \u2022 All India", type: "PUBLIC_HOLIDAY" },
+        { title: "\u0939\u0930\u0947\u0932\u0940 \u0924\u093F\u0939\u093E\u0930 (Hareli Festival)", date: "Aug 24, 2026", timeLocation: "State Public Holiday \u2022 Chhattisgarh", type: "STATE_FESTIVAL" },
+        { title: "\u0915\u0930\u092E\u093E \u092A\u0942\u091C\u093E (Karma Puja)", date: "Sep 20, 2026", timeLocation: "Regional Holiday \u2022 Chhattisgarh", type: "STATE_FESTIVAL" },
+        { title: "\u0917\u093E\u0902\u0927\u0940 \u091C\u092F\u0902\u0924\u0940 (Gandhi Jayanti)", date: "Oct 02, 2026", timeLocation: "National Public Holiday \u2022 All India", type: "PUBLIC_HOLIDAY" },
+        { title: "\u091B\u0924\u094D\u0924\u0940\u0938\u0917\u0922\u093C \u0930\u093E\u091C\u094D\u092F\u094B\u0924\u094D\u0938\u0935 (State Foundation Day)", date: "Nov 01, 2026", timeLocation: "State Foundation Day \u2022 Chhattisgarh", type: "STATE_FESTIVAL" },
+        { title: "\u0926\u0940\u092A\u093E\u0935\u0932\u0940 (Diwali & Govardhan Puja)", date: "Nov 08, 2026", timeLocation: "Gazetted Public Holiday", type: "PUBLIC_HOLIDAY" },
+        { title: "RMC City Council Public Hearing", date: "Thursday 5:00 PM", timeLocation: "Nagar Nigam Auditorium, Raipur", type: "CIVIC_HEARING" }
+      ];
+      for (const item of defaultEvents) {
+        await prisma.eventCalendar.create({ data: item });
+      }
+      list = await prisma.eventCalendar.findMany({ orderBy: { createdAt: "asc" } });
+    }
+    return list.map((e) => ({
+      id: e.id,
+      title: e.title,
+      date: e.date,
+      timeLocation: e.timeLocation,
+      type: e.type,
+      createdAt: e.createdAt.toISOString()
+    }));
+  }
+  async createEvent(input) {
+    const created = await prisma.eventCalendar.create({
+      data: {
+        title: input.title,
+        date: input.date,
+        timeLocation: input.timeLocation,
+        type: input.type || "PUBLIC_HOLIDAY"
+      }
+    });
+    return {
+      id: created.id,
+      title: created.title,
+      date: created.date,
+      timeLocation: created.timeLocation,
+      type: created.type,
+      createdAt: created.createdAt.toISOString()
+    };
+  }
+  async updateEvent(id, input) {
+    try {
+      const updated = await prisma.eventCalendar.update({
+        where: { id },
+        data: input
+      });
+      return {
+        id: updated.id,
+        title: updated.title,
+        date: updated.date,
+        timeLocation: updated.timeLocation,
+        type: updated.type,
+        createdAt: updated.createdAt.toISOString()
+      };
+    } catch {
+      return void 0;
+    }
+  }
+  async deleteEvent(id) {
+    try {
+      await prisma.eventCalendar.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
+  }
 };
 var db = new DatabaseStore();
 
@@ -923,6 +996,55 @@ app.put("/api/ads/:id/toggle", checkRole(["ADMIN"]), async (req, res) => {
     res.json({ ad: updated });
   } catch (err) {
     console.error("Ad toggle error:", err);
+    res.status(500).json({ error: "Database connection failed." });
+  }
+});
+app.get("/api/events", async (req, res) => {
+  try {
+    const events = await db.getAllEvents();
+    res.json({ events });
+  } catch (err) {
+    console.error("Events fetch error:", err);
+    res.status(500).json({ error: "Database connection failed." });
+  }
+});
+app.post("/api/events", checkRole(["ADMIN", "JOURNALIST"]), async (req, res) => {
+  try {
+    const { title, date, timeLocation, type } = req.body;
+    if (!title || !date || !timeLocation) {
+      res.status(400).json({ error: "Title, Date, and Time/Location are required." });
+      return;
+    }
+    const newEvent = await db.createEvent({ title, date, timeLocation, type });
+    res.status(201).json({ event: newEvent });
+  } catch (err) {
+    console.error("Event create error:", err);
+    res.status(500).json({ error: "Failed to create event." });
+  }
+});
+app.put("/api/events/:id", checkRole(["ADMIN", "JOURNALIST"]), async (req, res) => {
+  try {
+    const updated = await db.updateEvent(req.params.id, req.body);
+    if (!updated) {
+      res.status(404).json({ error: "Event not found." });
+      return;
+    }
+    res.json({ event: updated });
+  } catch (err) {
+    console.error("Event update error:", err);
+    res.status(500).json({ error: "Database connection failed." });
+  }
+});
+app.delete("/api/events/:id", checkRole(["ADMIN", "JOURNALIST"]), async (req, res) => {
+  try {
+    const success = await db.deleteEvent(req.params.id);
+    if (!success) {
+      res.status(404).json({ error: "Event not found." });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Event delete error:", err);
     res.status(500).json({ error: "Database connection failed." });
   }
 });

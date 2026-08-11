@@ -578,6 +578,86 @@ class DatabaseStore {
       return undefined;
     }
   }
+
+  // --- Event Calendar & Public Holiday Methods ---
+  async getAllEvents(): Promise<any[]> {
+    let list = await prisma.eventCalendar.findMany({
+      orderBy: { createdAt: 'asc' }
+    });
+
+    if (list.length === 0) {
+      // Auto-seed default public holidays & civic events
+      const defaultEvents = [
+        { title: 'स्वतंत्रता दिवस (Independence Day)', date: 'Aug 15, 2026', timeLocation: 'National Public Holiday • All India', type: 'PUBLIC_HOLIDAY' },
+        { title: 'हरेली तिहार (Hareli Festival)', date: 'Aug 24, 2026', timeLocation: 'State Public Holiday • Chhattisgarh', type: 'STATE_FESTIVAL' },
+        { title: 'करमा पूजा (Karma Puja)', date: 'Sep 20, 2026', timeLocation: 'Regional Holiday • Chhattisgarh', type: 'STATE_FESTIVAL' },
+        { title: 'गांधी जयंती (Gandhi Jayanti)', date: 'Oct 02, 2026', timeLocation: 'National Public Holiday • All India', type: 'PUBLIC_HOLIDAY' },
+        { title: 'छत्तीसगढ़ राज्योत्सव (State Foundation Day)', date: 'Nov 01, 2026', timeLocation: 'State Foundation Day • Chhattisgarh', type: 'STATE_FESTIVAL' },
+        { title: 'दीपावली (Diwali & Govardhan Puja)', date: 'Nov 08, 2026', timeLocation: 'Gazetted Public Holiday', type: 'PUBLIC_HOLIDAY' },
+        { title: 'RMC City Council Public Hearing', date: 'Thursday 5:00 PM', timeLocation: 'Nagar Nigam Auditorium, Raipur', type: 'CIVIC_HEARING' },
+      ];
+      for (const item of defaultEvents) {
+        await prisma.eventCalendar.create({ data: item });
+      }
+      list = await prisma.eventCalendar.findMany({ orderBy: { createdAt: 'asc' } });
+    }
+
+    return list.map(e => ({
+      id: e.id,
+      title: e.title,
+      date: e.date,
+      timeLocation: e.timeLocation,
+      type: e.type,
+      createdAt: e.createdAt.toISOString()
+    }));
+  }
+
+  async createEvent(input: { title: string; date: string; timeLocation: string; type?: string }): Promise<any> {
+    const created = await prisma.eventCalendar.create({
+      data: {
+        title: input.title,
+        date: input.date,
+        timeLocation: input.timeLocation,
+        type: input.type || 'PUBLIC_HOLIDAY'
+      }
+    });
+    return {
+      id: created.id,
+      title: created.title,
+      date: created.date,
+      timeLocation: created.timeLocation,
+      type: created.type,
+      createdAt: created.createdAt.toISOString()
+    };
+  }
+
+  async updateEvent(id: string, input: { title?: string; date?: string; timeLocation?: string; type?: string }): Promise<any> {
+    try {
+      const updated = await prisma.eventCalendar.update({
+        where: { id },
+        data: input
+      });
+      return {
+        id: updated.id,
+        title: updated.title,
+        date: updated.date,
+        timeLocation: updated.timeLocation,
+        type: updated.type,
+        createdAt: updated.createdAt.toISOString()
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  async deleteEvent(id: string): Promise<boolean> {
+    try {
+      await prisma.eventCalendar.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 export const db = new DatabaseStore();

@@ -106,3 +106,14 @@ export interface CmsArticleInput {
   status?: string;
 }
 
+export type EventType = 'PUBLIC_HOLIDAY' | 'STATE_FESTIVAL' | 'CIVIC_HEARING';
+
+export interface EventCalendarItem {
+  id: string;
+  title: string;
+  date: string;
+  timeLocation: string;
+  type: EventType;
+  createdAt?: string;
+}
+

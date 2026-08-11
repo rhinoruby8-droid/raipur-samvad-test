@@ -384,6 +384,60 @@ app.put('/api/ads/:id/toggle', checkRole(['ADMIN']), async (req, res) => {
   }
 });
 
+// 5b. Event Calendar & Public Holiday API
+app.get('/api/events', async (req, res) => {
+  try {
+    const events = await db.getAllEvents();
+    res.json({ events });
+  } catch (err: any) {
+    console.error('Events fetch error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
+  }
+});
+
+app.post('/api/events', checkRole(['ADMIN', 'JOURNALIST']), async (req, res) => {
+  try {
+    const { title, date, timeLocation, type } = req.body;
+    if (!title || !date || !timeLocation) {
+      res.status(400).json({ error: 'Title, Date, and Time/Location are required.' });
+      return;
+    }
+    const newEvent = await db.createEvent({ title, date, timeLocation, type });
+    res.status(201).json({ event: newEvent });
+  } catch (err: any) {
+    console.error('Event create error:', err);
+    res.status(500).json({ error: 'Failed to create event.' });
+  }
+});
+
+app.put('/api/events/:id', checkRole(['ADMIN', 'JOURNALIST']), async (req, res) => {
+  try {
+    const updated = await db.updateEvent(req.params.id, req.body);
+    if (!updated) {
+      res.status(404).json({ error: 'Event not found.' });
+      return;
+    }
+    res.json({ event: updated });
+  } catch (err: any) {
+    console.error('Event update error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
+  }
+});
+
+app.delete('/api/events/:id', checkRole(['ADMIN', 'JOURNALIST']), async (req, res) => {
+  try {
+    const success = await db.deleteEvent(req.params.id);
+    if (!success) {
+      res.status(404).json({ error: 'Event not found.' });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Event delete error:', err);
+    res.status(500).json({ error: 'Database connection failed.' });
+  }
+});
+
 // 6. User Management API (Admin only for full CRUD)
 app.get('/api/users', checkRole(['ADMIN']), async (req, res) => {
   try {

@@ -83,3 +83,13 @@ model AdPlacement {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
+
+model EventCalendar {
+  id           String   @id @default(uuid())
+  title        String
+  date         String
+  timeLocation String
+  type         String   @default("PUBLIC_HOLIDAY") // PUBLIC_HOLIDAY | STATE_FESTIVAL | CIVIC_HEARING
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

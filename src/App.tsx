@@ -12,7 +12,7 @@ import { ArticleReader } from './components/ArticleReader';
 import { CmsStudio } from './components/CmsStudio';
 import { LoginModal } from './components/LoginModal';
 import { Footer } from './components/Footer';
-import { Article, User, Role, Comment, AdPlacement, CmsArticleInput, AiOptimizeResult, Category } from './types';
+import { Article, User, Role, Comment, AdPlacement, CmsArticleInput, AiOptimizeResult, Category, EventCalendarItem } from './types';
 import { Calendar, TrendingUp, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function App() {
@@ -36,6 +36,7 @@ export default function App() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [ads, setAds] = useState<AdPlacement[]>([]);
   const [allComments, setAllComments] = useState<any[]>([]);
+  const [events, setEvents] = useState<EventCalendarItem[]>([]);
   const [isCmsOpen, setIsCmsOpen] = useState<boolean>(false);
   const [isLoginOpen, setIsLoginOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
@@ -139,10 +140,23 @@ export default function App() {
     }
   };
 
+  // Fetch Calendar Events & Public Holidays
+  const fetchEvents = async () => {
+    try {
+      const res = await fetch('/api/events');
+      const data = await res.json();
+      if (data.events) {
+        setEvents(data.events);
+      }
+    } catch (err) {
+      console.error('Failed to fetch events:', err);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      await Promise.all([fetchArticles(), fetchAds(), fetchCategories()]);
+      await Promise.all([fetchArticles(), fetchAds(), fetchCategories(), fetchEvents()]);
       if (currentUser.role === 'ADMIN') {
         await fetchUsers();
         await fetchAllComments();
@@ -445,6 +459,26 @@ export default function App() {
     if (res.ok) await fetchAds();
   };
 
+  const handleCreateEvent = async (eventData: any) => {
+    const res = await fetch('/api/events', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-role': currentUser.role,
+      },
+      body: JSON.stringify(eventData),
+    });
+    if (res.ok) await fetchEvents();
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    const res = await fetch(`/api/events/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-user-role': currentUser.role }
+    });
+    if (res.ok) await fetchEvents();
+  };
+
   // Track Ad Impressions/Clicks
   const handleTrackAd = async (id: string, type: 'impression' | 'click') => {
     try {
@@ -519,6 +553,9 @@ export default function App() {
             onUpdateAd={handleUpdateAd}
             onDeleteAd={handleDeleteAd}
             onToggleAd={handleToggleAd}
+            events={events}
+            onCreateEvent={handleCreateEvent}
+            onDeleteEvent={handleDeleteEvent}
           />
         ) : selectedArticle ? (
           /* VIEW 2: SINGLE ARTICLE READER */
@@ -622,25 +659,30 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Civic Calendar & Public Notices Widget */}
+                    {/* Civic Calendar & Public Holidays Widget */}
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 shadow-2xs">
                       <div className="flex items-center space-x-2 border-b border-slate-200 pb-2 mb-3 text-slate-900">
                         <Calendar className="w-4 h-4 text-[#dc2626]" />
-                        <h4 className="text-xs font-bold uppercase tracking-wider">Local Public Calendar</h4>
+                        <h4 className="text-xs font-bold uppercase tracking-wider">Local Public Calendar & Holidays</h4>
                       </div>
-                      <div className="space-y-2.5 text-xs font-sans">
-                        <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                          <div className="font-bold text-slate-900">City Council Public Hearing</div>
-                          <div className="text-[11px] text-slate-400">Tonight at 6:30 PM • Municipal Chambers</div>
-                        </div>
-                        <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                          <div className="font-bold text-slate-900">Riverfront Farmers Market</div>
-                          <div className="text-[11px] text-slate-400">Saturday 8:00 AM • Riverfront Park</div>
-                        </div>
-                        <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                          <div className="font-bold text-slate-900">School Board Budget Session</div>
-                          <div className="text-[11px] text-slate-400">Thursday 5:00 PM • Westside High Auditorium</div>
-                        </div>
+                      <div className="space-y-2.5 text-xs font-sans max-h-[380px] overflow-y-auto pr-1">
+                        {events.length === 0 ? (
+                          <div className="text-center py-4 text-slate-400 text-xs">No upcoming holidays listed.</div>
+                        ) : events.map((ev) => (
+                          <div key={ev.id} className="bg-white p-2.5 rounded-lg border border-slate-200 hover:border-[#dc2626]/40 transition-colors">
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <div className="font-bold text-slate-900 text-xs leading-tight">{ev.title}</div>
+                              <span className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded shrink-0 uppercase tracking-tight ${
+                                ev.type === 'PUBLIC_HOLIDAY' ? 'bg-rose-50 text-[#dc2626] border border-rose-200' :
+                                ev.type === 'STATE_FESTIVAL' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
+                                'bg-slate-100 text-slate-700 border border-slate-200'
+                              }`}>
+                                {ev.date}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-medium">{ev.timeLocation}</div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
