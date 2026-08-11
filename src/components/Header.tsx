@@ -94,9 +94,9 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right Column: Search bar and Authentication controls */}
-          <div className="flex items-center justify-center md:justify-end gap-3 w-full md:w-auto">
+          <div className="flex items-center justify-center md:justify-end gap-2.5 w-full md:w-auto flex-wrap sm:flex-nowrap">
             {/* Minimalist Glassmorphic Search Bar */}
-            <div className="relative w-48 sm:w-56">
+            <div className="relative flex-1 sm:flex-none sm:w-52 md:w-56 min-w-[160px]">
               <input
                 type="text"
                 value={searchQuery}
@@ -187,14 +187,14 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* 3. LIGHT CONTRAST CATEGORY NAVIGATION DESK */}
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto flex items-center justify-center space-x-1 overflow-x-auto py-0.5 px-4 scrollbar-none font-sans">
+        <div className="max-w-7xl mx-auto flex items-center justify-start md:justify-center space-x-1 overflow-x-auto py-0.5 px-4 scrollbar-none font-sans whitespace-nowrap">
           
           <button
             onClick={() => {
               onSelectCategory('All');
               if (isCmsOpen) onHomeClick();
             }}
-            className={`px-4 py-3.5 text-xs font-extrabold uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer relative ${
+            className={`px-4 py-3.5 text-xs font-extrabold uppercase tracking-wider shrink-0 transition-all cursor-pointer relative ${
               selectedCategory === 'All' && !isCmsOpen
                 ? 'text-[#dc2626]'
                 : 'text-slate-600 hover:text-[#dc2626]'
@@ -213,7 +213,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onSelectCategory(cat.name);
                 if (isCmsOpen) onHomeClick();
               }}
-              className={`px-4 py-3.5 text-xs font-extrabold uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer relative ${
+              className={`px-4 py-3.5 text-xs font-extrabold uppercase tracking-wider shrink-0 transition-all cursor-pointer relative ${
                 selectedCategory === cat.name && !isCmsOpen
                   ? 'text-[#dc2626]'
                   : 'text-slate-600 hover:text-[#dc2626]'

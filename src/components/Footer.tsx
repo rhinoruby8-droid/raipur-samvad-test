@@ -66,7 +66,7 @@ export const Footer: React.FC = () => {
               <span>आपकी सदस्यता सफलतापूर्वक जुड़ गई है! धन्यवाद।</span>
             </div>
           ) : (
-            <form onSubmit={handleSubscribe} className="flex space-x-2">
+            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
               <input
                 type="email"
                 value={email}

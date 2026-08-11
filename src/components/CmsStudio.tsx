@@ -310,10 +310,10 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="border-b border-slate-200 bg-slate-50 px-4 flex items-center space-x-1.5 overflow-x-auto">
+      <div className="border-b border-slate-200 bg-slate-50 px-4 flex items-center space-x-1.5 overflow-x-auto whitespace-nowrap scrollbar-none font-sans">
         <button
           onClick={() => setActiveTab('ARTICLES')}
-          className={`px-4 py-3 text-xs font-bold font-sans flex items-center space-x-2 border-b-2 cursor-pointer transition-all ${
+          className={`px-4 py-3 text-xs font-bold shrink-0 flex items-center space-x-2 border-b-2 cursor-pointer transition-all ${
             activeTab === 'ARTICLES'
               ? 'border-[#dc2626] text-[#dc2626] bg-white font-extrabold'
               : 'border-transparent text-slate-500 hover:text-slate-900'

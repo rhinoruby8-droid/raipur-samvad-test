@@ -130,16 +130,16 @@ export const ArticleReader: React.FC<ArticleReaderProps> = ({
             <span>Published {new Date(article.publishedAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
           </div>
 
-          <h1 className="text-3xl md:text-5xl font-extrabold font-playfair text-[#191b23] leading-tight mb-4">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold font-playfair text-[#191b23] leading-tight mb-4">
             {article.title}
           </h1>
 
-          <p className="text-lg font-serif text-[#424654] leading-relaxed mb-6 font-medium italic">
+          <p className="text-base sm:text-lg font-serif text-[#424654] leading-relaxed mb-6 font-medium italic">
             {article.excerpt}
           </p>
 
           {/* Author Byline & Utility Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[#e1e2ec]">
+          <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 pt-4 border-t border-[#e1e2ec]">
             <div className="flex items-center space-x-3">
               {article.authorAvatar ? (
                 <img src={article.authorAvatar} alt={article.authorName} className="w-10 h-10 rounded-full object-cover border border-[#c3c6d6]" />
@@ -159,7 +159,7 @@ export const ArticleReader: React.FC<ArticleReaderProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center space-x-3 text-xs text-[#737785]">
+            <div className="flex flex-wrap items-center space-x-3 text-xs text-[#737785]">
               <span className="flex items-center space-x-1">
                 <Clock className="w-4 h-4 text-[#0056d2]" />
                 <span>4 min read</span>
@@ -182,7 +182,7 @@ export const ArticleReader: React.FC<ArticleReaderProps> = ({
         {/* Main Cover Image */}
         {article.coverImageUrl && (
           <div className="mb-8 rounded-md overflow-hidden border border-[#c3c6d6]">
-            <img src={article.coverImageUrl} alt={article.title} className="w-full h-80 md:h-[420px] object-cover" />
+            <img src={article.coverImageUrl} alt={article.title} className="w-full h-52 sm:h-80 md:h-[420px] object-cover" />
             <div className="bg-[#f2f3fe] p-2 text-[11px] font-sans text-[#737785] italic text-center border-t border-[#e1e2ec]">
               LocalGrid Photography • Archived Coverage for {article.category}
             </div>

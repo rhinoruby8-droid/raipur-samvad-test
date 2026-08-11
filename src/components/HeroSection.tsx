@@ -16,9 +16,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ article, onReadArticle
           <img
             src={article.coverImageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=1200'}
             alt={article.title}
-            className="w-full h-72 md:h-96 object-cover group-hover:scale-102 transition-transform duration-500"
+            className="w-full h-52 sm:h-72 md:h-96 object-cover group-hover:scale-102 transition-transform duration-500"
           />
-          <div className="absolute top-3 left-3 flex items-center space-x-2">
+          <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
             <span className="px-3 py-1 rounded-md bg-[#dc2626] text-white text-[11px] font-bold uppercase tracking-wider flex items-center space-x-1 shadow-md">
               <Flame className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
               <span>मुख्य समाचार • {article.category}</span>
@@ -43,7 +43,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ article, onReadArticle
 
             <h2 
               onClick={() => onReadArticle(article)}
-              className="text-2xl md:text-3xl font-extrabold font-serif text-slate-900 leading-snug hover:text-[#dc2626] transition-colors cursor-pointer mb-3"
+              className="text-xl sm:text-2xl md:text-3xl font-extrabold font-serif text-slate-900 leading-snug hover:text-[#dc2626] transition-colors cursor-pointer mb-3"
             >
               {article.title}
             </h2>
@@ -69,7 +69,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ article, onReadArticle
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
               <div className="flex items-center space-x-3 text-xs text-slate-500 font-sans">
                 <span className="flex items-center space-x-1">
                   <Clock className="w-3.5 h-3.5 text-[#dc2626]" />
