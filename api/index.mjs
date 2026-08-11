@@ -2,7 +2,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 
 // server/db.ts
 import { PrismaClient } from "@prisma/client";
@@ -909,9 +908,11 @@ app.get("/api/analytics/overview", checkRole(["ADMIN", "JOURNALIST"]), async (re
   }
 });
 if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
-  createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa"
+  import("vite").then(({ createServer }) => {
+    return createServer({
+      server: { middlewareMode: true },
+      appType: "spa"
+    });
   }).then((vite) => {
     app.use(vite.middlewares);
   });

@@ -1,7 +1,6 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import { createServer as createViteServer } from 'vite';
 import { db } from './server/db.js';
 import { optimizeArticleWithGemini } from './server/gemini.js';
 import { Role } from './src/types.js';
@@ -471,10 +470,12 @@ app.get('/api/analytics/overview', checkRole(['ADMIN', 'JOURNALIST']), async (re
 
 // --- VITE / SERVING FRONTEND (Development & Local Standalone Production only) ---
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-  // Start Vite dev server in middleware mode locally
-  createViteServer({
-    server: { middlewareMode: true },
-    appType: 'spa',
+  // Start Vite dev server in middleware mode locally (dynamic import to avoid loading rollup on Vercel)
+  import('vite').then(({ createServer }) => {
+    return createServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
   }).then((vite) => {
     app.use(vite.middlewares);
   });
