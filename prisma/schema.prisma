@@ -1,0 +1,85 @@
+// LocalGrid PostgreSQL Prisma Database Schema
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  firebaseUid   String?   @unique
+  email         String    @unique
+  name          String
+  password      String?   @default("password123")
+  role          String    @default("READER") // READER | JOURNALIST | ADMIN
+  avatarUrl     String?
+  bio           String?
+  articles      Article[]
+  comments      Comment[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Article {
+  id              String   @id @default(uuid())
+  title           String
+  slug            String   @unique
+  content         String
+  excerpt         String?
+  category        String
+  paywallStatus   String   @default("FREE")
+  coverImageUrl   String?
+  viewCount       Int      @default(0)
+  status          String   @default("DRAFT") // DRAFT | PENDING_REVIEW | PUBLISHED
+  isPublished     Boolean  @default(false)
+  publishedAt     DateTime @default(now())
+  authorId        String
+  author          User     @relation(fields: [authorId], references: [id])
+  seoHeadlines    String?  // Stored as serialized JSON string
+  metaDescription String?
+  tags            String?  // Stored as serialized JSON string
+  comments        Comment[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  parentId  String?
+  parent    Comment? @relation("CommentToComment", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentToComment")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdPlacement {
+  id             String    @id @default(uuid())
+  advertiserName String
+  title          String
+  bannerUrl      String?
+  targetUrl      String
+  location       String    @default("SIDEBAR") // HEADER | SIDEBAR | IN_ARTICLE | FOOTER
+  active         Boolean   @default(true)
+  impressions    Int       @default(0)
+  clicks         Int       @default(0)
+  maxImpressions Int?
+  startDate      DateTime  @default(now())
+  endDate        DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}

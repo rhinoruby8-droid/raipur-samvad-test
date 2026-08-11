@@ -1,0 +1,6 @@
+{
+  "name": "Raipur Samvad",
+  "description": "Raipur's Own News Portal (हर खबर, रायपुर के साथ) - Independent local journalism, municipal reporting, CMS studio, and AI SEO assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
