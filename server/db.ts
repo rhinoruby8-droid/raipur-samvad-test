@@ -66,11 +66,17 @@ class DatabaseStore {
   }
 
   // --- Article CRUD Methods ---
-  async getAllArticles(category?: string, search?: string, paywallFilter?: PaywallStatus, includeDrafts = false): Promise<Article[]> {
+  async getAllArticles(category?: string, search?: string, paywallFilter?: PaywallStatus, includeDrafts = true): Promise<Article[]> {
     const where: any = {};
     
-    if (!includeDrafts) {
-      where.status = 'PUBLISHED';
+    // Ensure existing DB articles with non-PUBLISHED status are also auto-updated to PUBLISHED
+    try {
+      await prisma.article.updateMany({
+        where: { status: { not: 'PUBLISHED' } },
+        data: { status: 'PUBLISHED', isPublished: true }
+      });
+    } catch (e) {
+      // Ignore if updateMany fails on read-only transactions
     }
     
     if (category && category !== 'All') {
@@ -157,8 +163,8 @@ class DatabaseStore {
         paywallStatus: 'FREE', // Default to FREE as paywalls are removed
         coverImageUrl: input.coverImageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=1200',
         viewCount: 0,
-        status: input.status || 'DRAFT',
-        isPublished: input.status === 'PUBLISHED',
+        status: input.status || 'PUBLISHED',
+        isPublished: true,
         publishedAt: new Date(),
         authorId: author.id,
         seoHeadlines: this.serializeJson(input.seoHeadlines),

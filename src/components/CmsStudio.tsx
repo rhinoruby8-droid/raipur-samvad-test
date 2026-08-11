@@ -63,7 +63,7 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
   const [metaDescription, setMetaDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [status, setStatus] = useState<'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED'>('DRAFT');
+  const [status, setStatus] = useState<'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED'>('PUBLISHED');
 
   // Dynamic Category Form State
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -144,7 +144,7 @@ export const CmsStudio: React.FC<CmsStudioProps> = ({
     setSeoHeadlines([]);
     setMetaDescription('');
     setTags([]);
-    setStatus('DRAFT');
+    setStatus('PUBLISHED');
     setEditingArticleId(null);
     setAiResult(null);
   };

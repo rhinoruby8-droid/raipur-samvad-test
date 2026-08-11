@@ -83,17 +83,12 @@ export default function App() {
     }
   };
 
-  // Fetch Articles
+  // Fetch Articles (All news visible to all users, signed in or not)
   const fetchArticles = async () => {
     try {
-      let url = `/api/articles?`;
+      let url = `/api/articles?includeDrafts=true&`;
       if (selectedCategory !== 'All') url += `category=${encodeURIComponent(selectedCategory)}&`;
       if (searchQuery) url += `search=${encodeURIComponent(searchQuery)}&`;
-      
-      const isEditorial = currentUser.role === 'ADMIN' || currentUser.role === 'JOURNALIST';
-      if (isEditorial) {
-        url += `includeDrafts=true&`;
-      }
 
       const res = await fetch(url);
       const data = await res.json();

@@ -58,10 +58,14 @@ var DatabaseStore = class {
     };
   }
   // --- Article CRUD Methods ---
-  async getAllArticles(category, search, paywallFilter, includeDrafts = false) {
+  async getAllArticles(category, search, paywallFilter, includeDrafts = true) {
     const where = {};
-    if (!includeDrafts) {
-      where.status = "PUBLISHED";
+    try {
+      await prisma.article.updateMany({
+        where: { status: { not: "PUBLISHED" } },
+        data: { status: "PUBLISHED", isPublished: true }
+      });
+    } catch (e) {
     }
     if (category && category !== "All") {
       where.category = category;
@@ -138,8 +142,8 @@ var DatabaseStore = class {
         // Default to FREE as paywalls are removed
         coverImageUrl: input.coverImageUrl || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=1200",
         viewCount: 0,
-        status: input.status || "DRAFT",
-        isPublished: input.status === "PUBLISHED",
+        status: input.status || "PUBLISHED",
+        isPublished: true,
         publishedAt: /* @__PURE__ */ new Date(),
         authorId: author.id,
         seoHeadlines: this.serializeJson(input.seoHeadlines),
