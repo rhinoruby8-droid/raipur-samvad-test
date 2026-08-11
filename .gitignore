@@ -9,4 +9,3 @@ coverage/
 *.db
 *.db-journal
 uploads/
-api/
