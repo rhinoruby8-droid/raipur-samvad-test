@@ -534,6 +534,59 @@ app.get('/api/analytics/overview', checkRole(['ADMIN', 'JOURNALIST']), async (re
   }
 });
 
+// --- OG META TAG INJECTION HELPER ---
+const DEFAULT_OG = {
+  title: 'Raipur Samvad — Har Khabar, Raipur Ke Sath',
+  description: 'Raipur\'s most trusted Hindi-English news portal covering City Hall, Politics, Sports, Culture, Business, and Technology.',
+  image: '/logo.jpg',
+  url: '/'
+};
+
+const injectOgTags = (html: string, og: typeof DEFAULT_OG, baseUrl: string) => {
+  const absoluteImage = og.image.startsWith('http') ? og.image : `${baseUrl}${og.image}`;
+  const absoluteUrl = `${baseUrl}${og.url}`;
+  return html
+    .replace(/__OG_TITLE__/g, og.title.replace(/"/g, '&quot;'))
+    .replace(/__OG_DESCRIPTION__/g, og.description.replace(/"/g, '&quot;'))
+    .replace(/__OG_IMAGE__/g, absoluteImage)
+    .replace(/__OG_URL__/g, absoluteUrl);
+};
+
+// --- ARTICLE SLUG ROUTE (serves SPA with injected OG tags) ---
+app.get('/article/:slug', async (req, res) => {
+  try {
+    const article = await db.getArticleBySlug(req.params.slug);
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    
+    // Read the index.html template
+    let html: string;
+    if (process.env.VERCEL) {
+      // On Vercel, read from the static build output
+      html = fs.readFileSync(path.join(process.cwd(), 'dist', 'index.html'), 'utf-8');
+    } else {
+      html = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf-8');
+    }
+
+    if (article) {
+      const description = article.metaDescription || article.content.substring(0, 160).replace(/\n/g, ' ') + '...';
+      html = injectOgTags(html, {
+        title: `${article.title} — Raipur Samvad`,
+        description,
+        image: article.coverImageUrl || '/logo.jpg',
+        url: `/article/${article.slug}`
+      }, baseUrl);
+    } else {
+      html = injectOgTags(html, { ...DEFAULT_OG, url: `/article/${req.params.slug}` }, baseUrl);
+    }
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  } catch (err) {
+    console.error('OG injection error:', err);
+    res.redirect('/');
+  }
+});
+
 // --- VITE / SERVING FRONTEND (Development & Local Standalone Production only) ---
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   // Start Vite dev server in middleware mode locally (dynamic import to avoid loading rollup on Vercel)
@@ -550,7 +603,11 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   const distPath = path.join(process.cwd(), 'dist');
   app.use(express.static(distPath));
   app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
+    let html = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    html = injectOgTags(html, DEFAULT_OG, baseUrl);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
   });
 }
 

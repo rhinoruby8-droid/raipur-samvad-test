@@ -62,7 +62,9 @@ export const ArticleReader: React.FC<ArticleReaderProps> = ({
   const previewParagraphs = paragraphs.slice(0, 2);
   const remainingParagraphs = paragraphs.slice(2);
 
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://localgrid.org';
+  const shareUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/article/${article.slug}`
+    : `https://raipur-samvad.vercel.app/article/${article.slug}`;
 
   const handleCopyLink = () => {
     navigator.clipboard?.writeText(shareUrl);
@@ -420,6 +422,19 @@ export const ArticleReader: React.FC<ArticleReaderProps> = ({
                 Share directly via
               </label>
               <div className="grid grid-cols-2 gap-2.5">
+                {/* WhatsApp */}
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent('*' + article.title + '*\n' + shareUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2.5 p-2.5 rounded-lg border border-[#c3c6d6] bg-white hover:bg-[#e7fce9] hover:border-[#25D366] text-[#191b23] transition-all cursor-pointer group"
+                >
+                  <div className="w-7 h-7 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center group-hover:bg-[#25D366] group-hover:text-white transition-colors">
+                    <Share2 className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold font-sans">WhatsApp</span>
+                </a>
+
                 {/* Twitter / X */}
                 <a
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(shareUrl)}`}

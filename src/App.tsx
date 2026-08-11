@@ -183,11 +183,61 @@ export default function App() {
     setSelectedArticle(null);
   };
 
+  // Handle URL Slug Routing & Browser Back/Forward navigation
+  useEffect(() => {
+    const handleUrlRouting = async () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/article/')) {
+        const slug = path.replace('/article/', '');
+        if (slug) {
+          try {
+            const res = await fetch(`/api/articles/${slug}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.article) {
+                setSelectedArticle(data.article);
+                await fetchComments(data.article.id);
+                document.title = `${data.article.title} — Raipur Samvad`;
+              }
+            }
+          } catch (err) {
+            console.error('Failed to load article by slug from URL:', err);
+          }
+        }
+      }
+    };
+
+    handleUrlRouting();
+
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/article/')) {
+        handleUrlRouting();
+      } else {
+        setSelectedArticle(null);
+        document.title = 'Raipur Samvad — Har Khabar, Raipur Ke Sath';
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   // Handle Article Selection
   const handleReadArticle = async (article: Article) => {
     setSelectedArticle(article);
+    if (article.slug) {
+      window.history.pushState({}, '', `/article/${article.slug}`);
+      document.title = `${article.title} — Raipur Samvad`;
+    }
     await fetchComments(article.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCloseArticle = () => {
+    setSelectedArticle(null);
+    window.history.pushState({}, '', '/');
+    document.title = 'Raipur Samvad — Har Khabar, Raipur Ke Sath';
   };
 
   // CMS CRUD Actions
@@ -439,7 +489,7 @@ export default function App() {
         isCmsOpen={isCmsOpen}
         onHomeClick={() => {
           setIsCmsOpen(false);
-          setSelectedArticle(null);
+          handleCloseArticle();
         }}
       />
 
@@ -480,7 +530,7 @@ export default function App() {
           <ArticleReader
             article={selectedArticle}
             currentUser={currentUser}
-            onBack={() => setSelectedArticle(null)}
+            onBack={handleCloseArticle}
             onOpenSubscribe={() => {}}
             comments={comments}
             onAddComment={handleAddComment}

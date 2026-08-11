@@ -1055,6 +1055,45 @@ app.get("/api/analytics/overview", checkRole(["ADMIN", "JOURNALIST"]), async (re
     res.status(500).json({ error: "Failed to fetch analytics overview." });
   }
 });
+var DEFAULT_OG = {
+  title: "Raipur Samvad \u2014 Har Khabar, Raipur Ke Sath",
+  description: "Raipur's most trusted Hindi-English news portal covering City Hall, Politics, Sports, Culture, Business, and Technology.",
+  image: "/logo.jpg",
+  url: "/"
+};
+var injectOgTags = (html, og, baseUrl) => {
+  const absoluteImage = og.image.startsWith("http") ? og.image : `${baseUrl}${og.image}`;
+  const absoluteUrl = `${baseUrl}${og.url}`;
+  return html.replace(/__OG_TITLE__/g, og.title.replace(/"/g, "&quot;")).replace(/__OG_DESCRIPTION__/g, og.description.replace(/"/g, "&quot;")).replace(/__OG_IMAGE__/g, absoluteImage).replace(/__OG_URL__/g, absoluteUrl);
+};
+app.get("/article/:slug", async (req, res) => {
+  try {
+    const article = await db.getArticleBySlug(req.params.slug);
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    let html;
+    if (process.env.VERCEL) {
+      html = fs.readFileSync(path.join(process.cwd(), "dist", "index.html"), "utf-8");
+    } else {
+      html = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf-8");
+    }
+    if (article) {
+      const description = article.metaDescription || article.content.substring(0, 160).replace(/\n/g, " ") + "...";
+      html = injectOgTags(html, {
+        title: `${article.title} \u2014 Raipur Samvad`,
+        description,
+        image: article.coverImageUrl || "/logo.jpg",
+        url: `/article/${article.slug}`
+      }, baseUrl);
+    } else {
+      html = injectOgTags(html, { ...DEFAULT_OG, url: `/article/${req.params.slug}` }, baseUrl);
+    }
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
+  } catch (err) {
+    console.error("OG injection error:", err);
+    res.redirect("/");
+  }
+});
 if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
   import("vite").then(({ createServer }) => {
     return createServer({
@@ -1068,7 +1107,11 @@ if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
   const distPath = path.join(process.cwd(), "dist");
   app.use(express.static(distPath));
   app.get("*", (req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
+    let html = fs.readFileSync(path.join(distPath, "index.html"), "utf-8");
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    html = injectOgTags(html, DEFAULT_OG, baseUrl);
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
   });
 }
 if (!process.env.VERCEL) {
