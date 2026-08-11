@@ -42,28 +42,28 @@ export const Header: React.FC<HeaderProps> = ({
   const isGuest = !currentUser || currentUser.email === 'guest@raipursamvad.com' || currentUser.name === 'Guest Reader';
 
   return (
-    <header className="z-45 sticky top-0 font-sans shadow-md border-b border-slate-200">
+    <header className="z-45 sticky top-0 font-sans shadow-md border-b border-slate-200 max-w-full overflow-x-hidden">
       {/* 1. TOP UTILITY METADATA STRIP: Date, Ticker, and Weather */}
-      <div className="bg-[#0f172a] text-slate-400 border-b border-slate-800 text-[10px] uppercase font-bold tracking-widest py-2 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2.5">
-          <div className="flex items-center space-x-3">
-            <span className="text-rose-500 font-extrabold text-[9px] bg-rose-950/60 border border-rose-900/60 px-1.5 py-0.5 rounded tracking-normal">
+      <div className="bg-[#0f172a] text-slate-400 border-b border-slate-800 text-[10px] uppercase font-bold tracking-widest py-2 px-3 sm:px-4 max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 w-full max-w-full overflow-hidden">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-center max-w-full">
+            <span className="text-rose-500 font-extrabold text-[9px] bg-rose-950/60 border border-rose-900/60 px-1.5 py-0.5 rounded tracking-normal shrink-0">
               LIVE
             </span>
             <span className="text-slate-300">{currentDateStr}</span>
-            <span className="text-slate-700">|</span>
-            <span className="flex items-center space-x-1.5 text-slate-300">
-              <Sun className="w-3.5 h-3.5 text-amber-500" />
+            <span className="text-slate-700 hidden sm:inline">|</span>
+            <span className="flex items-center space-x-1.5 text-slate-300 shrink-0">
+              <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
               <span>Raipur • 32°C Sunny</span>
             </span>
           </div>
 
           {/* Rolling News Ticker */}
-          <div className="flex items-center space-x-2 text-slate-300 max-w-md md:max-w-lg overflow-hidden whitespace-nowrap">
+          <div className="flex items-center space-x-2 text-slate-300 w-full md:w-auto max-w-full md:max-w-lg min-w-0 overflow-hidden">
             <span className="text-[#dc2626] font-extrabold tracking-wider shrink-0 text-[9px] bg-rose-950/40 border border-rose-900/30 px-1.5 py-0.2 rounded">
               UPDATE
             </span>
-            <span className="truncate animate-marquee">
+            <span className="truncate min-w-0 text-slate-300 font-medium">
               Elevated Smart Transit Corridor Connecting Jaistambh Chowk to Telibandha Marine Drive approved
             </span>
           </div>
